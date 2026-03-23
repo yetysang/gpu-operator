@@ -26,6 +26,7 @@ testbin/*
 *~
 *.DS_Store
 .vscode
+.scannerwork/
 
 # Credentials and runtime environment
 kubeconfig
