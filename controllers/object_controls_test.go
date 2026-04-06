@@ -503,7 +503,11 @@ func testDaemonsetCommon(t *testing.T, cp *gpuv1.ClusterPolicy, component string
 
 	if component == "Driver" && cp.Spec.Driver.UsePrecompiledDrivers() {
 		// for pre-compiled drivers, container image is kernel specific
-		require.Contains(t, mainCtr.Image, "-generic-ubuntu22.04", "unexpected Image")
+		suffix := "-generic-ubuntu22.04"
+		if clusterPolicyController.gpuNodeOSTag != "" {
+			suffix = fmt.Sprintf("-%s", clusterPolicyController.gpuNodeOSTag)
+		}
+		require.Contains(t, mainCtr.Image, suffix, "unexpected Image")
 	} else {
 		require.Equal(t, mainCtrImage, mainCtr.Image, "unexpected Image")
 	}
@@ -1875,6 +1879,94 @@ func TestMIGManager(t *testing.T) {
 			}
 
 			// cleanup by deleting all kubernetes objects
+			err = removeState(&clusterPolicyController, clusterPolicyController.idx-1)
+			if err != nil {
+				t.Fatalf("error removing state %v:", err)
+			}
+			clusterPolicyController.idx--
+		})
+	}
+}
+
+// TestDriverPrecompiledLibModulesUbuntu tests that /lib/modules is NOT mounted for precompiled drivers on Ubuntu
+func TestDriverPrecompiledLibModulesUbuntu(t *testing.T) {
+	cp := getDriverTestInput("precompiled")
+	output := getDriverTestOutput("precompiled")
+
+	ds, err := testDaemonsetCommon(t, cp, "Driver", output["numDaemonsets"].(int))
+	if err != nil {
+		t.Fatalf("error in testDaemonsetCommon(): %v", err)
+	}
+	require.NotNil(t, ds)
+
+	// Check that /lib/modules volume and mount are NOT present
+	for _, vol := range ds.Spec.Template.Spec.Volumes {
+		require.NotEqual(t, "lib-modules", vol.Name, "lib-modules volume should not be present for ubuntu")
+	}
+
+	driverContainer := findContainerByName(ds.Spec.Template.Spec.Containers, "nvidia-driver-ctr")
+	require.NotNil(t, driverContainer)
+
+	for _, mount := range driverContainer.VolumeMounts {
+		require.NotEqual(t, "lib-modules", mount.Name, "lib-modules volume mount should not be present for ubuntu")
+	}
+
+	// Cleanup
+	err = removeState(&clusterPolicyController, clusterPolicyController.idx-1)
+	if err != nil {
+		t.Fatalf("error removing state %v:", err)
+	}
+	clusterPolicyController.idx--
+}
+
+// TestDriverPrecompiledLibModulesSuse tests that /lib/modules is mounted for precompiled drivers on SLES and SL-Micro
+func TestDriverPrecompiledLibModulesSuse(t *testing.T) {
+	osTags := []string{"sles16.0", "sl-micro6.1"}
+
+	for _, osTag := range osTags {
+		t.Run(osTag, func(t *testing.T) {
+			// Save original OS tag and restore after test
+			originalOSTag := clusterPolicyController.gpuNodeOSTag
+			defer func() {
+				clusterPolicyController.gpuNodeOSTag = originalOSTag
+			}()
+
+			clusterPolicyController.gpuNodeOSTag = osTag
+
+			cp := getDriverTestInput("precompiled")
+			output := getDriverTestOutput("precompiled")
+
+			ds, err := testDaemonsetCommon(t, cp, "Driver", output["numDaemonsets"].(int))
+			if err != nil {
+				t.Fatalf("error in testDaemonsetCommon(): %v", err)
+			}
+			require.NotNil(t, ds)
+
+			// Check for /lib/modules volume and mount
+			foundVolume := false
+			for _, vol := range ds.Spec.Template.Spec.Volumes {
+				if vol.Name == "lib-modules" {
+					foundVolume = true
+					require.NotNil(t, vol.HostPath)
+					require.Equal(t, "/lib/modules", vol.HostPath.Path)
+				}
+			}
+			require.Truef(t, foundVolume, "lib-modules volume not found for precompiled drivers on %s", osTag)
+
+			foundMount := false
+			driverContainer := findContainerByName(ds.Spec.Template.Spec.Containers, "nvidia-driver-ctr")
+			require.NotNil(t, driverContainer)
+
+			for _, mount := range driverContainer.VolumeMounts {
+				if mount.Name == "lib-modules" {
+					foundMount = true
+					require.Equal(t, "/run/host/lib/modules", mount.MountPath)
+					require.True(t, mount.ReadOnly)
+				}
+			}
+			require.Truef(t, foundMount, "lib-modules volume mount not found for precompiled drivers on %s", osTag)
+
+			// Cleanup
 			err = removeState(&clusterPolicyController, clusterPolicyController.idx-1)
 			if err != nil {
 				t.Fatalf("error removing state %v:", err)
