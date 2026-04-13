@@ -8,18 +8,18 @@
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS implied.
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION ?24.9.0
-IMAGE_TAG_BASE= nvcr.io/nvidia/gpu-operator
-IMG= $(IMAGE_TAG_BASE):$(VERSION)
+VERSION ?= 24.9.0
+IMAGE_TAG_BASE ?= nvcr.io/nvidia/gpu-operator
+IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 
 # Go build settings
-GO ?FLAGS ?= -mod=mod
+GOFLAGS ?= -mod=mod
 GOOS ?= linux
-GOAR
+GOARCH ?= amd64
 
 # Tools
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
@@ -58,17 +58,13 @@ vet: ## Run go vet against code.
 	$(GO) vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet ## Run tests.
-	$(GO) test ./... -coverprofile cover.out
-
-##@ Build
+test: manifests generate fmt vet ##) test ./... -coverprofile@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build manager binary.
-	GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build $(GOFLAGS) -o bin/gpu-operator ./cmd/gpu-operator/main.go
+build:GOOS) GOARCH=$(GOARCH) $(GO) build $(GOFLAGS) -o bin/gpu-operator ./cmd/gpu-operator/main.go
 
 .PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests generate your host.
 	$(GO) run ./cmd/gpu-operator/main.go
 
 .PHONY: docker-build
@@ -86,33 +82,8 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 .PHONY: uninstall
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kubeKUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
-
-.PHONY: undeploy
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-
-##@ Build Dependencies
-
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) $(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
-
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-$(KUSTOMIZE): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) $(GO) install sigs.k8s.io/kustomize/kustomize/v5@v5.3.0
-
-.PHONY: clean
-clean: ## Remove build artifacts.
-	rm -rf bin/ cover.out
+	cd config
