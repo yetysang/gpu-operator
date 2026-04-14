@@ -13,16 +13,16 @@
 # limitations under the License.
 
 VERSION ?= 24.9.0
-IMAGE_TAG_BASE ?= nvcr.io/nvidia/gpu-operator
-IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
+IMAGE_TAG_BASE ?= nvcr.io/nvidia):$(VERSION)
 
 # Go build settings
 GOFLAGS ?= -mod=mod
 GOOS ?= linux
-GOARCH ?= amd64
+ Default to arm64 for local dev on Apple Silicon
+GOARCH ?= arm64
 
 # Tools
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CONTRO $(LOCALBIN)/controller-gen
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 LOCALBIN ?= $(shell pwd)/bin
 
