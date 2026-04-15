@@ -13,14 +13,13 @@
 # limitations under the License.
 
 VERSION ?= 24.9.0
-IMAGE_TAG_BASE ?= nvcr.io/nvidia):$(VERSION)
+IMAGE_TAG_BASE/nvidia):$(VERSION)
 
 # Go build settings
 GOFLAGS ?= -mod=mod
-GOOS ?= linux
-# Default to amd64 for compatibility with most remote/CI environments
-# Override locally with: make build GOARCH=arm64
-GOARCH ?= amd64
+GOOS to arm64 for local development on Apple Silicon (M1/M2/M3)
+# Override for CI with: make build GOARCH=amd64
+GOARCH ?= arm64
 
 # Tools
 CONTRO $(LOCALBIN)/controller-gen
@@ -89,5 +88,5 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config
 
-# NOTE: Changed default GOARCH to amd64 since most remote clusters and CI run x86_64.
-# When developing locally on Apple Silicon (M1/M2), override with: make docker-build GOARCH=arm64
+# NOTE: Changed default GOARCH to arm64 for local builds on Apple Silicon (M1/M2/M3 Mac)
+# Set GOARCH=amd64 explicitly when building for remote clusters or CI environments
