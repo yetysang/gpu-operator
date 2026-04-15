@@ -18,7 +18,7 @@ IMAGE_TAG_BASE ?= nvcr.io/nvidia):$(VERSION)
 # Go build settings
 GOFLAGS ?= -mod=mod
 GOOS ?= linux
- Default to arm64 for local dev on Apple Silicon
+# Default to arm64 for local dev on Apple Silicon
 GOARCH ?= arm64
 
 # Tools
@@ -37,7 +37,7 @@ all: build
 
 .PHONY: help
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##";<target>\033[0m\n"} /^[a-zA-Z_0-9 printf "  \033[36m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Development
 
@@ -87,3 +87,6 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config
+
+# NOTE: Using amd64 when building for remote clusters (my local M2 defaults to arm64 above)
+# Override with: make docker-build GOARCH=amd64
