@@ -18,8 +18,9 @@ IMAGE_TAG_BASE ?= nvcr.io/nvidia):$(VERSION)
 # Go build settings
 GOFLAGS ?= -mod=mod
 GOOS ?= linux
-# Default to arm64 for local dev on Apple Silicon
-GOARCH ?= arm64
+# Default to amd64 for compatibility with most remote/CI environments
+# Override locally with: make build GOARCH=arm64
+GOARCH ?= amd64
 
 # Tools
 CONTRO $(LOCALBIN)/controller-gen
@@ -88,5 +89,5 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config
 
-# NOTE: Using amd64 when building for remote clusters (my local M2 defaults to arm64 above)
-# Override with: make docker-build GOARCH=amd64
+# NOTE: Changed default GOARCH to amd64 since most remote clusters and CI run x86_64.
+# When developing locally on Apple Silicon (M1/M2), override with: make docker-build GOARCH=arm64
