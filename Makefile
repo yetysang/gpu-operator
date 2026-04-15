@@ -13,36 +13,32 @@
 # limitations under the License.
 
 VERSION ?= 24.9.0
-IMAGE_TAG_BASE/nvidia):$(VERSION)
+IMG ?= ghcr.io/$(USER)/gpu-operator:$(VERSION)
 
 # Go build settings
 GOFLAGS ?= -mod=mod
-GOOS to arm64 for local development on Apple Silicon (M1/M2/M3)
+# Default GOARCH to arm64 for local development on Apple Silicon (M1/M2/M3)
 # Override for CI with: make build GOARCH=amd64
 GOARCH ?= arm64
+GOOS ?= $(shell go env GOOS)
 
 # Tools
-CONTRO $(LOCALBIN)/controller-gen
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 LOCALBIN ?= $(shell pwd)/bin
 
 # CRD and RBAC paths
 CRD_OPTIONS ?= "crd:generateEmbeddedObjectMeta=true"
-MANIFESTS_DIR ?= deployments/gpu-operator
-
-.PHONY: all
-all: build
-
-##@ General
+MANIFESTS_DIR ?= deployments/PHONY: all
+all General
 
 .PHONY: help
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##";<target>\033[0m\n"} /^[a-zA-Z_0-9 printf "  \033[36m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Development
 
-.PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+.PHONY: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=gpu-operator-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
@@ -58,13 +54,17 @@ vet: ## Run go vet against code.
 	$(GO) vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet ##) test ./... -coverprofile@ Build
+test: manifests generate fmt vet ## Run tests.
+	go test ./... -coverprofile=cover.out
+
+##@ Build
 
 .PHONY: build
-build:GOOS) GOARCH=$(GOARCH) $(GO) build $(GOFLAGS) -o bin/gpu-operator ./cmd/gpu-operator/main.go
+build: ## Build the gpu-operator binary.
+	GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build $(GOFLAGS) -o bin/gpu-operator ./cmd/gpu-operator/main.go
 
 .PHONY: run
-run: manifests generate your host.
+run: manifests generate ## Run the controller from your host.
 	$(GO) run ./cmd/gpu-operator/main.go
 
 .PHONY: docker-build
@@ -82,11 +82,12 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 .PHONY: uninstall
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kubeKUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config
 
 # NOTE: Changed default GOARCH to arm64 for local builds on Apple Silicon (M1/M2/M3 Mac)
-# Set GOARCH=amd64 explicitly when building for remote clusters or CI environments
+# Set GOARCH=amd64 when building for CI or production targets.
