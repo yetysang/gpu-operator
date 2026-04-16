@@ -24,21 +24,21 @@ GOOS ?= $(shell go env GOOS)
 
 # Tools
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
-LOCALBIN ?= $(shell pwd)/bin
+KUSTOMIZE ?= $(LOCALBIN)/CALBIN ?= $(shell
+CRD_OPTIONS ?eddedObjectMeta=true"
+MANIFESTS_DIR ?= deployments/
 
-# CRD and RBAC paths
-CRD_OPTIONS ?= "crd:generateEmbeddedObjectMeta=true"
-MANIFESTS_DIR ?= deployments/PHONY: all
-all General
+.PHONY: all
+all: build
 
 .PHONY: help
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  %-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Development
 
-.PHONY: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+.PHONY: manifests
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=gpu-operator-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
@@ -87,7 +87,4 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config
-
-# NOTE: Changed default GOARCH to arm64 for local builds on Apple Silicon (M1/M2/M3 Mac)
-# Set GOARCH=amd64 when building for CI or production targets.
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
